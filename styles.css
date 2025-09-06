@@ -1,0 +1,947 @@
+/* Web Font Loading */
+@font-face {
+    font-family: 'Antinoou';
+    src: url('Antinoou.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+    /* Enable proper diacritic positioning */
+    font-feature-settings: "mark" 1, "mkmk" 1;
+}
+
+/* Fallback for older browsers */
+@font-face {
+    font-family: 'Antinoou-fallback';
+    src: local('Noto Sans Coptic'),
+         local('New Athena Unicode'),
+         local('Coptic'),
+         url('Antinoou.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+    font-feature-settings: "mark" 1, "mkmk" 1;
+}
+
+/* Safari-specific fix for combining diacritical marks */
+@supports (-webkit-appearance: none) {
+    .text-content,
+    .typing-input {
+        /* Force Safari to use proper mark positioning */
+        -webkit-text-stroke: 0.01px transparent;
+        text-shadow: 0 0 0 transparent;
+    }
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Modern Coptic Color Palette */
+    --coptic-gold: #D4AF37;
+    --coptic-deep-gold: #B8860B;
+    --coptic-burgundy: #8B1538;
+    --coptic-deep-red: #722F37;
+    --coptic-cream: #F8F6F0;
+    --coptic-warm-white: #FEFCF7;
+    --coptic-dark-brown: #3C2414;
+    --coptic-medium-brown: #5D4037;
+    --coptic-light-brown: #8D6E63;
+    --coptic-sage: #9CAF88;
+    --coptic-deep-blue: #1A365D;
+    
+    /* Modern neutrals */
+    --text-primary: #2D3748;
+    --text-secondary: #4A5568;
+    --text-muted: #718096;
+    --surface-primary: #FFFFFF;
+    --surface-secondary: #F7FAFC;
+    --border-light: #E2E8F0;
+    --border-medium: #CBD5E0;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Border radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, var(--coptic-cream) 0%, var(--coptic-warm-white) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Header - Modern Coptic Design */
+.header {
+    background: linear-gradient(135deg, var(--coptic-burgundy) 0%, var(--coptic-deep-red) 100%);
+    border-radius: var(--radius-xl);
+    padding: 2rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--coptic-gold), var(--coptic-deep-gold), var(--coptic-gold));
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo i {
+    font-size: 2rem;
+    color: var(--coptic-gold);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.logo h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--coptic-warm-white);
+    letter-spacing: -0.025em;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.logo h1:hover {
+    opacity: 0.8;
+}
+
+.stats-bar {
+    display: flex;
+    gap: 2rem;
+}
+
+.stat {
+    text-align: center;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--coptic-gold);
+}
+
+/* Game Area - Clean Modern Design */
+.game-area {
+    flex: 1;
+    background: var(--surface-primary);
+    border-radius: var(--radius-xl);
+    padding: 3rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+}
+
+/* Difficulty Panel */
+.difficulty-panel {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.difficulty-panel h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 3rem;
+    color: var(--coptic-burgundy);
+    letter-spacing: -0.025em;
+}
+
+.difficulty-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.difficulty-btn {
+    background: var(--surface-primary);
+    border: 2px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.difficulty-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--coptic-gold);
+    background: linear-gradient(135deg, var(--surface-primary) 0%, var(--surface-secondary) 100%);
+}
+
+.difficulty-btn:active {
+    transform: translateY(0);
+}
+
+.difficulty-btn i {
+    font-size: 2.5rem;
+    color: var(--coptic-burgundy);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.difficulty-btn span {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.difficulty-btn small {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Typing Area */
+.typing-area {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Progress Bar */
+.progress-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--surface-secondary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--coptic-gold), var(--coptic-deep-gold));
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 50px;
+    font-size: 0.875rem;
+}
+
+/* Live Stats */
+.live-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.live-stat {
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.live-stat-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--coptic-burgundy);
+    margin-bottom: 0.5rem;
+}
+
+.live-stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Text Display */
+.text-display {
+    background: var(--surface-secondary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    min-height: 200px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.text-content {
+    font-family: 'Antinoou', 'Antinoou-fallback', 'Noto Sans Coptic', 'New Athena Unicode', serif;
+    font-size: 1.5rem;
+    line-height: 1.8;
+    color: var(--text-primary);
+    user-select: none;
+    text-align: center;
+    letter-spacing: 0.025em;
+    /* Fix for combining diacritical marks in Safari */
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+    font-variant-ligatures: common-ligatures contextual;
+    text-rendering: optimizeLegibility;
+    -webkit-font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+    -moz-font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+}
+
+.text-content .char {
+    position: relative;
+    transition: all 0.15s ease;
+    padding: 2px 1px;
+    border-radius: var(--radius-sm);
+}
+
+.text-content .char.correct {
+    background-color: rgba(72, 187, 120, 0.2);
+    color: #2F855A;
+}
+
+.text-content .char.incorrect {
+    background-color: rgba(245, 101, 101, 0.2);
+    color: #C53030;
+}
+
+.text-content .char.current {
+    background-color: var(--coptic-gold);
+    color: white;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Input Area */
+.input-container {
+    margin-bottom: 2rem;
+}
+
+.typing-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 1.5rem;
+    border: 2px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    font-family: 'Antinoou', 'Antinoou-fallback', 'Noto Sans Coptic', 'New Athena Unicode', serif;
+    font-size: 1.25rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: all 0.2s ease;
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    /* Fix for combining diacritical marks in Safari */
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+    font-variant-ligatures: common-ligatures contextual;
+    text-rendering: optimizeLegibility;
+    -webkit-font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+    -moz-font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+}
+
+.typing-input:focus {
+    outline: none;
+    border-color: var(--coptic-gold);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.typing-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--surface-secondary);
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    min-width: 120px;
+    justify-content: center;
+    letter-spacing: 0.025em;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--coptic-gold), var(--coptic-deep-gold));
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    background: linear-gradient(135deg, var(--coptic-deep-gold), #9A7B0A);
+}
+
+.btn-secondary {
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-medium);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover {
+    background: var(--surface-secondary);
+    border-color: var(--coptic-gold);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal-content {
+    background: var(--surface-primary);
+    border-radius: var(--radius-xl);
+    padding: 2.5rem;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-light);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--coptic-burgundy);
+    margin-bottom: 1rem;
+    letter-spacing: -0.025em;
+}
+
+.achievement-badge {
+    background: linear-gradient(135deg, var(--coptic-gold), var(--coptic-deep-gold));
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.result-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.result-stat {
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+}
+
+.result-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--coptic-burgundy);
+    margin-bottom: 0.5rem;
+}
+
+.result-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.performance-message {
+    text-align: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(184, 134, 11, 0.1));
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* Settings Panel */
+.settings-panel {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.settings-toggle {
+    background: linear-gradient(135deg, var(--coptic-burgundy), var(--coptic-deep-red));
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.settings-toggle:hover {
+    background: linear-gradient(135deg, var(--coptic-deep-red), #5A1A2A);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.settings-content {
+    background: var(--surface-primary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    margin-top: 1rem;
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.settings-content h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--coptic-burgundy);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.setting-group {
+    margin-bottom: 1.5rem;
+}
+
+.setting-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s ease;
+}
+
+.setting-label:hover {
+    background: var(--surface-secondary);
+}
+
+.setting-label input[type="checkbox"],
+.setting-label input[type="radio"] {
+    display: none;
+}
+
+.checkmark,
+.radiomark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background: var(--surface-primary);
+}
+
+.radiomark {
+    border-radius: 50%;
+}
+
+.checkmark::after,
+.radiomark::after {
+    content: '';
+    position: absolute;
+    display: none;
+}
+
+.checkmark::after {
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.radiomark::after {
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: white;
+    transform: translate(-50%, -50%);
+}
+
+.setting-label input[type="checkbox"]:checked + .checkmark,
+.setting-label input[type="radio"]:checked + .radiomark {
+    background: var(--coptic-gold);
+    border-color: var(--coptic-gold);
+}
+
+.setting-label input[type="checkbox"]:checked + .checkmark::after,
+.setting-label input[type="radio"]:checked + .radiomark::after {
+    display: block;
+}
+
+.setting-group small {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-left: 2.5rem;
+    display: block;
+    line-height: 1.4;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 0;
+    border-top: 1px solid var(--border-light);
+    margin-top: auto;
+}
+
+.footer p {
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: var(--coptic-gold);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+    
+    .header {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .stats-bar {
+        gap: 1rem;
+    }
+    
+    .game-area {
+        padding: 2rem;
+    }
+    
+    .difficulty-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .live-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .result-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .controls {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 100%;
+        max-width: 250px;
+    }
+    
+    .modal-content {
+        padding: 2rem 1.5rem;
+        margin: 1rem;
+    }
+    
+    .text-content {
+        font-size: 1.25rem;
+    }
+    
+    .typing-input {
+        font-size: 1.125rem;
+    }
+    
+    .settings-content {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo h1 {
+        font-size: 1.5rem;
+    }
+    
+    .difficulty-panel h2 {
+        font-size: 2rem;
+    }
+    
+    .text-content {
+        font-size: 1.125rem;
+    }
+    
+    .typing-input {
+        font-size: 1rem;
+    }
+    
+    .difficulty-btn {
+        padding: 1.5rem 1rem;
+    }
+    
+    .difficulty-btn i {
+        font-size: 2rem;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .text-content .char.correct {
+        background-color: #22C55E;
+        color: white;
+    }
+    
+    .text-content .char.incorrect {
+        background-color: #EF4444;
+        color: white;
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface-secondary);
+    border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--coptic-gold);
+    border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--coptic-deep-gold);
+}
+
+/* WPM Graph Modal Styles */
+.graph-container {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+}
+
+.graph-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.graph-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+}
+
+.graph-stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--coptic-burgundy);
+    margin-bottom: 0.25rem;
+}
+
+.graph-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Make Best WPM stat clickable */
+.stat:last-child {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.stat:last-child:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .graph-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .graph-container {
+        padding: 0.75rem;
+    }
+}

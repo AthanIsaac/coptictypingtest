@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coptic Typing Practice - Learn Ancient Script</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-ankh"></i>
+                <h1>Coptic Typing Practice</h1>
+            </div>
+            <div class="stats-bar">
+                <div class="stat">
+                    <span class="stat-label">Level</span>
+                    <span class="stat-value" id="level">1</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Score</span>
+                    <span class="stat-value" id="score">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Best WPM</span>
+                    <span class="stat-value" id="best-wpm">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Game Area -->
+        <main class="game-area">
+            <!-- Difficulty Selection -->
+            <div class="difficulty-panel" id="difficulty-panel">
+                <h2>Select Difficulty Level</h2>
+                <div class="difficulty-options">
+                    <button class="difficulty-btn" data-difficulty="beginner">
+                        <i class="fas fa-feather-alt"></i>
+                        <span>Beginner</span>
+                        <small>Short phrases and common words</small>
+                    </button>
+                    <button class="difficulty-btn" data-difficulty="intermediate">
+                        <i class="fas fa-scroll"></i>
+                        <span>Intermediate</span>
+                        <small>Medium liturgical passages</small>
+                    </button>
+                    <button class="difficulty-btn" data-difficulty="advanced">
+                        <i class="fas fa-monument"></i>
+                        <span>Advanced</span>
+                        <small>Complex sacred texts</small>
+                    </button>
+                </div>
+                
+                <!-- Settings Panel -->
+                <div class="settings-panel">
+                    <button class="settings-toggle" id="settings-toggle">
+                        <i class="fas fa-cog"></i>
+                        Practice Settings
+                    </button>
+                    <div class="settings-content" id="settings-content" style="display: none;">
+                        <h3>Text Generation Options</h3>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="checkbox" id="include-punctuation" checked>
+                                <span class="checkmark"></span>
+                                Include Punctuation
+                            </label>
+                            <small>Practice with traditional punctuation marks</small>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="checkbox" id="include-uppercase" checked>
+                                <span class="checkmark"></span>
+                                Include Mixed Case
+                            </label>
+                            <small>Practice with uppercase and lowercase letters</small>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="radio" name="text-mode" value="mixed" checked>
+                                <span class="radiomark"></span>
+                                Mixed Content
+                            </label>
+                            <label class="setting-label">
+                                <input type="radio" name="text-mode" value="curated">
+                                <span class="radiomark"></span>
+                                Traditional Texts Only
+                            </label>
+                            <label class="setting-label">
+                                <input type="radio" name="text-mode" value="generated">
+                                <span class="radiomark"></span>
+                                Generated Combinations Only
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Test Area -->
+            <div class="typing-area" id="typing-area" style="display: none;">
+                <!-- Progress Bar -->
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <span class="progress-text" id="progress-text">0%</span>
+                </div>
+
+                <!-- Live Stats -->
+                <div class="live-stats">
+                    <div class="live-stat">
+                        <span class="live-stat-value" id="wpm">0</span>
+                        <span class="live-stat-label">WPM</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-stat-value" id="accuracy">100</span>
+                        <span class="live-stat-label">Accuracy</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-stat-value" id="time">0</span>
+                        <span class="live-stat-label">Time</span>
+                    </div>
+                </div>
+
+                <!-- Text Display -->
+                <div class="text-display" id="text-display">
+                    <div class="text-content" id="text-content"></div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-container">
+                    <textarea 
+                        id="typing-input" 
+                        class="typing-input" 
+                        placeholder="Start typing the Coptic text above..."
+                        disabled
+                    ></textarea>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="controls">
+                    <button class="btn btn-primary" id="start-btn">
+                        <i class="fas fa-play"></i>
+                        Start Test
+                    </button>
+                    <button class="btn btn-secondary" id="reset-btn" style="display: none;">
+                        <i class="fas fa-redo"></i>
+                        Reset
+                    </button>
+                    <button class="btn btn-secondary" id="back-btn">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Menu
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Modal -->
+            <div class="modal" id="results-modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Practice Session Complete!</h2>
+                        <div class="achievement-badge" id="achievement-badge" style="display: none;">
+                            <i class="fas fa-medal"></i>
+                            <span id="achievement-text">Achievement Unlocked!</span>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="result-stats">
+                            <div class="result-stat">
+                                <span class="result-value" id="final-wpm">0</span>
+                                <span class="result-label">Words Per Minute</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value" id="final-accuracy">0%</span>
+                                <span class="result-label">Accuracy</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value" id="final-time">0s</span>
+                                <span class="result-label">Time Taken</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value" id="final-score">0</span>
+                                <span class="result-label">Score Earned</span>
+                            </div>
+                        </div>
+                        <div class="performance-message" id="performance-message"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" id="try-again-btn">
+                            <i class="fas fa-redo"></i>
+                            Try Again
+                        </button>
+                        <button class="btn btn-secondary" id="new-challenge-btn">
+                            <i class="fas fa-forward"></i>
+                            New Challenge
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WPM Graph Modal -->
+            <div class="modal" id="wpm-graph-modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Typing Speed Progress</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="graph-container">
+                            <canvas id="wpm-chart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="graph-stats">
+                            <div class="graph-stat">
+                                <span class="graph-stat-value" id="avg-wpm">0</span>
+                                <span class="graph-stat-label">Average WPM</span>
+                            </div>
+                            <div class="graph-stat">
+                                <span class="graph-stat-value" id="sessions-count">0</span>
+                                <span class="graph-stat-label">Sessions</span>
+                            </div>
+                            <div class="graph-stat">
+                                <span class="graph-stat-value" id="improvement">+0</span>
+                                <span class="graph-stat-label">Improvement</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" id="close-graph-btn">
+                            <i class="fas fa-times"></i>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Learn and Practice the Ancient Coptic Script</p>
+            <div class="footer-links">
+                <a href="#" id="about-btn">About</a>
+                <a href="#" id="help-btn">Help</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="coptic-texts.js"></script>
+    <script src="word-generator.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
