@@ -36,7 +36,9 @@ class CopticWordGenerator {
             const words = line.split(/\s+/);
             words.forEach(word => {
                 // Remove punctuation for word extraction but keep track of it
-                const cleanWord = word.replace(/[^\u2C80-\u2CFF\u0300-\u036F]/g, '');
+                // Keep Coptic characters, combining marks, and related Unicode blocks
+                // More inclusive approach: remove only common punctuation, keep all letter-like characters
+                const cleanWord = word.replace(/[.,;:!?()[\]{}""''`~@#$%^&*+=|\\/<>]/g, '');
                 if (cleanWord.length >= 2) { // Only include words with 2+ characters
                     wordSet.add(cleanWord);
                     // Also add the original word with punctuation if different
@@ -118,8 +120,9 @@ class CopticWordGenerator {
         }
 
         if (!this.settings.includePunctuation) {
-            // Remove punctuation marks
-            copticText = copticText.replace(/[^\u2C80-\u2CFF\u0300-\u036F\s]/g, '');
+            // Remove punctuation marks but keep Coptic characters and spaces
+            // More inclusive approach: remove only common punctuation
+            copticText = copticText.replace(/[.,;:!?()[\]{}""''`~@#$%^&*+=|\\/<>]/g, '');
         }
 
         return {

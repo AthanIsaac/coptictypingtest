@@ -1,34 +1,27 @@
-// Coptic Typing Test - Main Application Logic
+// Coptic Typing Test - Time-based Application Logic
 class CopticTypingTest {
     constructor() {
-        this.currentDifficulty = null;
-        this.currentText = null;
+        this.testDuration = 30; // Default 30 seconds
         this.startTime = null;
         this.endTime = null;
         this.isTestActive = false;
+        this.isTestComplete = false;
         this.currentCharIndex = 0;
         this.errors = 0;
         this.totalChars = 0;
-        
-        // Word generator and settings
-        this.wordGenerator = new CopticWordGenerator();
-        this.settings = {
-            includePunctuation: true,
-            includeUppercase: true,
-            textMode: 'mixed' // 'mixed', 'curated', or 'generated'
-        };
+        this.currentText = '';
+        this.timeRemaining = 30;
+        this.totalCharsTyped = 0;
+        this.totalErrors = 0;
         
         // User statistics
         this.userStats = this.loadUserStats();
         
         // DOM elements
-        this.difficultyPanel = document.getElementById('difficulty-panel');
         this.typingArea = document.getElementById('typing-area');
         this.textContent = document.getElementById('text-content');
         this.typingInput = document.getElementById('typing-input');
-        this.startBtn = document.getElementById('start-btn');
         this.resetBtn = document.getElementById('reset-btn');
-        this.backBtn = document.getElementById('back-btn');
         this.resultsModal = document.getElementById('results-modal');
         
         // Stats elements
@@ -39,49 +32,31 @@ class CopticTypingTest {
         this.progressText = document.getElementById('progress-text');
         
         // Header stats
-        this.levelElement = document.getElementById('level');
-        this.scoreElement = document.getElementById('score');
         this.bestWpmElement = document.getElementById('best-wpm');
         
         this.initializeEventListeners();
         this.updateHeaderStats();
+        this.initializeFileLoader();
+        this.generateNewText();
         
-        // Debug: Check if all elements are found
+        // Add resize listener for responsive behavior
+        this.initializeResizeHandler();
+        
         console.log('CopticTypingTest initialized');
-        console.log('Elements found:', {
-            difficultyPanel: !!this.difficultyPanel,
-            typingArea: !!this.typingArea,
-            textContent: !!this.textContent,
-            typingInput: !!this.typingInput,
-            startBtn: !!this.startBtn
-        });
     }
     
     initializeEventListeners() {
-        // Difficulty selection
-        document.querySelectorAll('.difficulty-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const difficulty = e.currentTarget.dataset.difficulty;
-                this.selectDifficulty(difficulty);
+        // Duration selection
+        document.querySelectorAll('input[name="duration"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.testDuration = parseInt(e.target.value);
+                this.timeRemaining = this.testDuration;
+                this.resetTest();
             });
         });
         
         // Control buttons
-        this.startBtn.addEventListener('click', () => this.startTest());
         this.resetBtn.addEventListener('click', () => this.resetTest());
-        this.backBtn.addEventListener('click', () => this.backToMenu());
-        
-        // Settings toggle button - FIX: Add missing event listener
-        const settingsToggle = document.getElementById('settings-toggle');
-        if (settingsToggle) {
-            settingsToggle.addEventListener('click', () => {
-                console.log('Settings toggle clicked');
-                this.toggleSettings();
-            });
-            console.log('Settings toggle event listener added');
-        } else {
-            console.error('Settings toggle button not found!');
-        }
         
         // Typing input
         this.typingInput.addEventListener('input', (e) => this.handleTyping(e));
@@ -94,11 +69,11 @@ class CopticTypingTest {
         // Prevent context menu on text display
         this.textContent.addEventListener('contextmenu', (e) => e.preventDefault());
         
-        // Add click handler to logo/title to go back to home
+        // Add click handler to logo/title to reset
         const logoTitle = document.querySelector('.logo h1');
         if (logoTitle) {
             logoTitle.style.cursor = 'pointer';
-            logoTitle.addEventListener('click', () => this.backToMenu());
+            logoTitle.addEventListener('click', () => this.resetTest());
         }
         
         // Add click handler to Best WPM stat to show graph
@@ -108,96 +83,276 @@ class CopticTypingTest {
         document.getElementById('close-graph-btn').addEventListener('click', () => {
             document.getElementById('wpm-graph-modal').style.display = 'none';
         });
-        
-        // Initialize settings functionality
-        this.initializeSettings();
     }
     
-    selectDifficulty(difficulty) {
-        console.log('Selecting difficulty:', difficulty);
-        this.currentDifficulty = difficulty;
-        this.currentText = this.generateTextBasedOnSettings(difficulty);
+    initializeResizeHandler() {
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            // Debounce resize events
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                // Regenerate lines based on new screen size
+                if (this.sourceLines && this.sourceLines.length > 0) {
+                    this.generateDynamicLines();
+                    this.setupTextDisplay();
+                }
+            }, 300);
+        });
+    }
+    
+    async initializeFileLoader() {
+        console.log('Loading Coptic text data...');
+        const success = await copticFileLoader.loadCopticText();
+        if (success) {
+            console.log('Coptic text data loaded successfully');
+            this.generateNewText();
+        } else {
+            console.warn('Failed to load Coptic text data, using fallback');
+        }
+    }
+    
+    generateNewText() {
+        // Generate text lines for scrolling display
+        const availableLines = copticFileLoader.copticLines || ['ⲙⲁⲣⲉⲛⲟⲩⲱϣⲧ ⲙ̀ⲡⲉⲛⲥⲱⲧⲏⲣ'];
         
-        console.log('Selected text:', this.currentText);
-        console.log('Current settings:', this.settings);
+        // Generate enough source text for the test duration
+        const estimatedLinesNeeded = Math.ceil(this.testDuration / 8);
+        this.sourceLines = [];
         
-        // Hide difficulty panel and show typing area
-        this.difficultyPanel.style.display = 'none';
-        this.typingArea.style.display = 'block';
+        for (let i = 0; i < Math.max(estimatedLinesNeeded, 20); i++) {
+            const randomLine = availableLines[Math.floor(Math.random() * availableLines.length)];
+            this.sourceLines.push(randomLine);
+        }
         
-        // Setup the text display
+        // Generate dynamic lines based on screen size
+        this.generateDynamicLines();
+        
+        this.currentLineIndex = 0;
+        this.currentLineCharIndex = 0;
         this.setupTextDisplay();
-        this.resetStats();
+    }
+    
+    generateDynamicLines() {
+        // Calculate optimal words per line based on screen size
+        const containerWidth = this.textContent.offsetWidth || 800;
+        const avgCharWidth = 20; // Approximate width for Coptic characters
+        const wordsPerLine = Math.max(3, Math.floor(containerWidth / (avgCharWidth * 8))); // ~8 chars per word average
         
-        // Enable typing input immediately and clear any existing content
-        this.typingInput.disabled = false;
-        this.typingInput.value = '';
-        this.typingInput.focus();
+        this.textLines = [];
+        let currentLine = '';
+        let wordCount = 0;
         
-        console.log('Typing input enabled and focused');
+        // Process all source lines
+        for (const sourceLine of this.sourceLines) {
+            const words = sourceLine.split(' ');
+            
+            for (const word of words) {
+                if (wordCount === 0) {
+                    currentLine = word;
+                    wordCount = 1;
+                } else if (wordCount < wordsPerLine) {
+                    currentLine += ' ' + word;
+                    wordCount++;
+                } else {
+                    // Line is full, save it and start new line
+                    this.textLines.push(currentLine);
+                    currentLine = word;
+                    wordCount = 1;
+                }
+            }
+            
+            // If we have words in current line, save it
+            if (currentLine.trim()) {
+                this.textLines.push(currentLine);
+                currentLine = '';
+                wordCount = 0;
+            }
+        }
+        
+        // Ensure we have enough lines
+        if (this.textLines.length < 10) {
+            this.generateMoreDynamicLines();
+        }
+    }
+    
+    generateMoreDynamicLines() {
+        const availableLines = copticFileLoader.copticLines || ['ⲙⲁⲣⲉⲛⲟⲩⲱϣⲧ ⲙ̀ⲡⲉⲛⲥⲱⲧⲏⲣ'];
+        const containerWidth = this.textContent.offsetWidth || 800;
+        const avgCharWidth = 20;
+        const wordsPerLine = Math.max(3, Math.floor(containerWidth / (avgCharWidth * 8)));
+        
+        let currentLine = '';
+        let wordCount = 0;
+        
+        for (let i = 0; i < 10; i++) {
+            const randomLine = availableLines[Math.floor(Math.random() * availableLines.length)];
+            const words = randomLine.split(' ');
+            
+            for (const word of words) {
+                if (wordCount === 0) {
+                    currentLine = word;
+                    wordCount = 1;
+                } else if (wordCount < wordsPerLine) {
+                    currentLine += ' ' + word;
+                    wordCount++;
+                } else {
+                    this.textLines.push(currentLine);
+                    currentLine = word;
+                    wordCount = 1;
+                }
+            }
+            
+            if (currentLine.trim()) {
+                this.textLines.push(currentLine);
+                currentLine = '';
+                wordCount = 0;
+            }
+        }
     }
     
     setupTextDisplay() {
-        const text = this.currentText.coptic;
         this.textContent.innerHTML = '';
         
-        // Create character spans
-        for (let i = 0; i < text.length; i++) {
-            const span = document.createElement('span');
-            span.textContent = text[i];
-            span.className = 'char';
-            if (i === 0) span.classList.add('current');
-            this.textContent.appendChild(span);
+        // Always show exactly 2 lines
+        const linesToShow = this.textLines.slice(this.currentLineIndex, this.currentLineIndex + 2);
+        
+        // Ensure we have at least 2 lines to show
+        while (linesToShow.length < 2 && this.currentLineIndex + linesToShow.length < this.textLines.length) {
+            linesToShow.push(this.textLines[this.currentLineIndex + linesToShow.length]);
         }
         
-        this.totalChars = text.length;
+        // If we still don't have enough lines, generate more
+        if (linesToShow.length < 2) {
+            this.generateMoreDynamicLines();
+            const additionalLines = this.textLines.slice(this.currentLineIndex + linesToShow.length, this.currentLineIndex + 2);
+            linesToShow.push(...additionalLines);
+        }
+        
+        // Create line containers
+        linesToShow.forEach((lineText, lineIndex) => {
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'text-line';
+            
+            // First line is active (where user types), second line is preview
+            if (lineIndex === 0) {
+                lineDiv.classList.add('active-line');
+            } else {
+                lineDiv.classList.add('preview-line');
+            }
+            
+            lineDiv.dataset.lineIndex = this.currentLineIndex + lineIndex;
+            
+            // Create character spans for this line, preserving combining characters
+            const chars = this.splitTextPreservingCombining(lineText + ' '); // Simply add space to the end
+            chars.forEach((char, i) => {
+                const span = document.createElement('span');
+                span.textContent = char;
+                span.className = 'char';
+                span.dataset.lineIndex = this.currentLineIndex + lineIndex;
+                span.dataset.charIndex = i;
+                lineDiv.appendChild(span);
+            });
+            
+            this.textContent.appendChild(lineDiv);
+        });
+        
+        // Set current character
+        this.updateCurrentChar();
         this.currentCharIndex = 0;
         this.errors = 0;
     }
     
+    updateCurrentChar() {
+        // Remove all current classes
+        this.textContent.querySelectorAll('.char').forEach(char => {
+            char.classList.remove('current');
+        });
+        
+        // Find and highlight current character
+        const currentChar = this.textContent.querySelector(
+            `[data-line-index="${this.currentLineIndex}"][data-char-index="${this.currentLineCharIndex}"]`
+        );
+        if (currentChar) {
+            currentChar.classList.add('current');
+        }
+    }
+    
+    splitTextPreservingCombining(text) {
+        // Split text while preserving combining diacritical marks
+        const chars = [];
+        let i = 0;
+        
+        while (i < text.length) {
+            let char = text[i];
+            i++;
+            
+            // Check for combining diacritical marks that follow the current character
+            while (i < text.length && this.isCombiningMark(text.codePointAt(i))) {
+                char += text[i];
+                i++;
+            }
+            
+            chars.push(char);
+        }
+        
+        return chars;
+    }
+    
+    isCombiningMark(codePoint) {
+        // Check if character is a combining diacritical mark
+        return (
+            (codePoint >= 0x0300 && codePoint <= 0x036F) || // Combining Diacritical Marks
+            (codePoint >= 0x1AB0 && codePoint <= 0x1AFF) || // Combining Diacritical Marks Extended
+            (codePoint >= 0x1DC0 && codePoint <= 0x1DFF) || // Combining Diacritical Marks Supplement
+            (codePoint >= 0x20D0 && codePoint <= 0x20FF) || // Combining Diacritical Marks for Symbols
+            (codePoint >= 0xFE20 && codePoint <= 0xFE2F)    // Combining Half Marks
+        );
+    }
+    
     startTest() {
-        if (this.isTestActive) return; // Prevent double-start
+        if (this.isTestActive || this.isTestComplete) return;
         
         this.isTestActive = true;
         this.startTime = Date.now();
-        this.typingInput.disabled = false;
-        this.typingInput.focus();
-        this.startBtn.style.display = 'none';
-        this.resetBtn.style.display = 'inline-flex';
+        this.timeRemaining = this.testDuration;
         
         // Start the timer
         this.startTimer();
+        
+        console.log(`Test started for ${this.testDuration} seconds`);
     }
     
     startTimer() {
         this.timerInterval = setInterval(() => {
-            if (this.isTestActive) {
-                const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-                this.timeElement.textContent = elapsed + 's';
+            if (this.isTestActive && !this.isTestComplete) {
+                const elapsed = (Date.now() - this.startTime) / 1000;
+                this.timeRemaining = Math.max(0, this.testDuration - elapsed);
+                
+                this.timeElement.textContent = Math.ceil(this.timeRemaining) + 's';
                 this.updateLiveStats();
+                
+                // Check if time is up
+                if (this.timeRemaining <= 0) {
+                    this.completeTest();
+                }
             }
         }, 100);
     }
     
     handleTyping(e) {
         const inputText = e.target.value;
-        const targetText = this.currentText.coptic;
         
         // Start the test automatically on first keystroke
-        if (!this.isTestActive && inputText.length > 0) {
+        if (!this.isTestActive && !this.isTestComplete && inputText.length > 0) {
             this.startTest();
         }
         
         // Only process if test is active
-        if (!this.isTestActive) return;
+        if (!this.isTestActive || this.isTestComplete) return;
         
         // Update character highlighting
-        this.updateCharacterHighlighting(inputText, targetText);
+        this.updateCharacterHighlighting(inputText);
         
-        // Check if test is complete
-        if (inputText.length === targetText.length) {
-            this.completeTest();
-        }
     }
     
     handleKeyDown(e) {
@@ -207,44 +362,166 @@ class CopticTypingTest {
         }
     }
     
-    updateCharacterHighlighting(inputText, targetText) {
+    updateCharacterHighlighting(inputText) {
         const chars = this.textContent.querySelectorAll('.char');
-        let errorCount = 0;
+        let currentLineErrors = 0;
         
-        chars.forEach((char, index) => {
+        // Get current line text and split it the same way as display (with space added)
+        const currentLineText = this.textLines[this.currentLineIndex] + ' ';
+        const expectedChars = this.splitTextPreservingCombining(currentLineText);
+        
+        // Track position in input text
+        let inputIndex = 0;
+        let foundCurrentChar = false;
+        let currentCharElement = null;
+        
+        // DEBUG: Focus on visual rendering issues
+        console.log('=== VISUAL RENDERING DEBUG ===');
+        console.log('Input length:', inputText.length, 'Expected chars:', expectedChars.length);
+        
+        chars.forEach((char, globalCharIndex) => {
+            const lineIndex = parseInt(char.dataset.lineIndex);
+            const charIndex = parseInt(char.dataset.charIndex);
+            
+            // Store previous classes for comparison
+            const previousClasses = char.className;
             char.className = 'char';
             
-            if (index < inputText.length) {
-                if (inputText[index] === targetText[index]) {
-                    char.classList.add('correct');
-                } else {
-                    char.classList.add('incorrect');
-                    errorCount++;
+            if (lineIndex === this.currentLineIndex) {
+                const expectedChar = expectedChars[charIndex];
+                
+                if (inputIndex < inputText.length && !foundCurrentChar) {
+                    // Get the portion of input text that should match this expected character
+                    const inputSegment = inputText.substr(inputIndex, expectedChar.length);
+                    
+                    if (inputSegment.length === expectedChar.length) {
+                        // Full character typed - check if correct or incorrect
+                        if (inputSegment === expectedChar) {
+                            char.classList.add('correct');
+                        } else {
+                            char.classList.add('incorrect');
+                            currentLineErrors++;
+                        }
+                        inputIndex += expectedChar.length;
+                    } else if (inputSegment.length < expectedChar.length && inputIndex + inputSegment.length === inputText.length) {
+                        // Partially typed character - this is the current character being typed
+                        char.classList.add('current');
+                        foundCurrentChar = true;
+                        currentCharElement = char;
+                    }
+                } else if (inputIndex === inputText.length && !foundCurrentChar) {
+                    // Next character to be typed (only highlight the first one we encounter)
+                    char.classList.add('current');
+                    foundCurrentChar = true;
+                    currentCharElement = char;
                 }
-            } else if (index === inputText.length) {
-                char.classList.add('current');
+                
+                // DEBUG: Log visual changes
+                if (char.className !== previousClasses) {
+                    console.log(`Char ${charIndex} "${expectedChar}": ${previousClasses} → ${char.className}`);
+                    
+                    // Check if element is actually visible
+                    const rect = char.getBoundingClientRect();
+                    const computedStyle = window.getComputedStyle(char);
+                    console.log(`  Visibility: display=${computedStyle.display}, opacity=${computedStyle.opacity}, visibility=${computedStyle.visibility}`);
+                    console.log(`  Position: x=${rect.x}, y=${rect.y}, width=${rect.width}, height=${rect.height}`);
+                    
+                    if (char.classList.contains('current')) {
+                        console.log(`  CURRENT CHAR: "${expectedChar}" at position ${charIndex}`);
+                        console.log(`  Background: ${computedStyle.backgroundColor}`);
+                        console.log(`  Color: ${computedStyle.color}`);
+                    }
+                }
             }
         });
         
-        this.errors = errorCount;
-        this.currentCharIndex = inputText.length;
+        // Additional check for current character visibility
+        if (currentCharElement) {
+            setTimeout(() => {
+                const rect = currentCharElement.getBoundingClientRect();
+                const computedStyle = window.getComputedStyle(currentCharElement);
+                console.log('CURRENT CHAR AFTER RENDER:');
+                console.log(`  Element: ${currentCharElement.textContent}`);
+                console.log(`  Classes: ${currentCharElement.className}`);
+                console.log(`  Visible: ${rect.width > 0 && rect.height > 0}`);
+                console.log(`  Display: ${computedStyle.display}`);
+                console.log(`  Opacity: ${computedStyle.opacity}`);
+            }, 0);
+        }
         
-        // Update progress
-        const progress = (inputText.length / targetText.length) * 100;
-        this.progressFill.style.width = progress + '%';
-        this.progressText.textContent = Math.round(progress) + '%';
+        console.log('===============================');
+        
+        this.errors = currentLineErrors;
+        this.currentLineCharIndex = inputText.length;
+        
+        // Check if current line is completed by comparing with expected total length
+        const expectedTotalLength = expectedChars.reduce((sum, char) => sum + char.length, 0);
+        if (inputText.length >= expectedTotalLength) {
+            this.completeCurrentLine();
+        }
+        
+        // Update progress based on time
+        const timeProgress = ((this.testDuration - this.timeRemaining) / this.testDuration) * 100;
+        this.progressFill.style.width = timeProgress + '%';
+        this.progressText.textContent = Math.round(timeProgress) + '%';
     }
+    
+    completeCurrentLine() {
+        // Add completed line stats to totals
+        const completedLineLength = this.textLines[this.currentLineIndex].length + 1; // +1 for the space we added
+        this.totalCharsTyped += completedLineLength;
+        this.totalErrors += this.errors;
+        
+        // Move to next line (scroll one line at a time)
+        this.currentLineIndex++;
+        this.currentLineCharIndex = 0;
+        this.errors = 0; // Reset current line errors
+        
+        // Clear input for next line
+        this.typingInput.value = '';
+        
+        // Add more lines if needed (keep buffer of lines ahead)
+        if (this.currentLineIndex > this.textLines.length - 5) {
+            this.generateMoreDynamicLines();
+        }
+        
+        // Update display to show next 2 lines (user always types on top line)
+        this.setupTextDisplay();
+        
+        // Add smooth transition effect
+        this.addLineTransitionEffect();
+    }
+    
+    addLineTransitionEffect() {
+        // Add a subtle animation when moving to next line
+        const activeLines = this.textContent.querySelectorAll('.active-line');
+        activeLines.forEach(line => {
+            line.style.transform = 'translateY(-2px)';
+            line.style.transition = 'transform 0.2s ease';
+            setTimeout(() => {
+                line.style.transform = 'translateY(0)';
+            }, 200);
+        });
+    }
+    
+    // Method removed - functionality moved to generateMoreDynamicLines()
+    
     
     updateLiveStats() {
         if (!this.startTime) return;
         
         const timeElapsed = (Date.now() - this.startTime) / 1000 / 60; // in minutes
-        const wordsTyped = this.currentCharIndex / 5; // Standard: 5 chars = 1 word
-        const rawWpm = timeElapsed > 0 ? Math.round(wordsTyped / timeElapsed) : 0;
-        const accuracy = this.currentCharIndex > 0 ?
-            Math.round(((this.currentCharIndex - this.errors) / this.currentCharIndex) * 100) : 100;
         
-        // Apply accuracy penalty to WPM: Adjusted WPM = Raw WPM × (Accuracy / 100)²
+        // Calculate total characters typed: completed lines + current line progress
+        const currentTotalCharsTyped = this.totalCharsTyped + this.currentLineCharIndex;
+        const currentTotalErrors = this.totalErrors + this.errors;
+        
+        const wordsTyped = currentTotalCharsTyped / 5; // Standard: 5 chars = 1 word
+        const rawWpm = timeElapsed > 0 ? Math.round(wordsTyped / timeElapsed) : 0;
+        const accuracy = currentTotalCharsTyped > 0 ?
+            Math.round(((currentTotalCharsTyped - currentTotalErrors) / currentTotalCharsTyped) * 100) : 100;
+        
+        // Apply accuracy penalty to WPM
         const accuracyFactor = (accuracy / 100) ** 2;
         const adjustedWpm = Math.round(rawWpm * accuracyFactor);
         
@@ -254,35 +531,36 @@ class CopticTypingTest {
     
     completeTest() {
         this.isTestActive = false;
+        this.isTestComplete = true;
         this.endTime = Date.now();
         clearInterval(this.timerInterval);
         
         // Calculate final stats
         const timeElapsed = (this.endTime - this.startTime) / 1000;
         const timeInMinutes = timeElapsed / 60;
-        const wordsTyped = this.totalChars / 5;
-        const rawWpm = Math.round(wordsTyped / timeInMinutes);
-        const accuracy = Math.round(((this.totalChars - this.errors) / this.totalChars) * 100);
         
-        // Apply accuracy penalty to WPM: Adjusted WPM = Raw WPM × (Accuracy / 100)²
+        // Calculate total characters typed: completed lines + current line progress
+        const finalTotalCharsTyped = this.totalCharsTyped + this.currentLineCharIndex;
+        const finalTotalErrors = this.totalErrors + this.errors;
+        
+        const wordsTyped = finalTotalCharsTyped / 5;
+        const rawWpm = Math.round(wordsTyped / timeInMinutes);
+        const accuracy = finalTotalCharsTyped > 0 ?
+            Math.round(((finalTotalCharsTyped - finalTotalErrors) / finalTotalCharsTyped) * 100) : 100;
+        
+        // Apply accuracy penalty to WPM
         const accuracyFactor = (accuracy / 100) ** 2;
         const adjustedWpm = Math.round(rawWpm * accuracyFactor);
         
-        // Calculate score using adjusted WPM
-        const difficultyMultiplier = DIFFICULTY_SETTINGS[this.currentDifficulty].timeBonus;
-        const baseScore = adjustedWpm * accuracy;
-        const finalScore = Math.round(baseScore * difficultyMultiplier);
-        
         // Update user stats
-        this.updateUserStats(adjustedWpm, accuracy, finalScore, timeElapsed);
+        this.updateUserStats(adjustedWpm, accuracy, timeElapsed);
         
         // Show results
-        this.showResults(adjustedWpm, accuracy, finalScore, timeElapsed);
+        this.showResults(adjustedWpm, accuracy, timeElapsed);
     }
     
-    updateUserStats(wpm, accuracy, score, time) {
+    updateUserStats(wpm, accuracy, time) {
         this.userStats.testsCompleted++;
-        this.userStats.totalScore += score;
         this.userStats.bestWPM = Math.max(this.userStats.bestWPM, wpm);
         this.userStats.bestAccuracy = Math.max(this.userStats.bestAccuracy, accuracy);
         
@@ -294,35 +572,23 @@ class CopticTypingTest {
             date: new Date().toISOString(),
             wpm: wpm,
             accuracy: accuracy,
-            difficulty: this.currentDifficulty
+            duration: this.testDuration
         });
         
-        // Keep only last 50 sessions to avoid storage bloat
+        // Keep only last 50 sessions
         if (this.userStats.wpmHistory.length > 50) {
             this.userStats.wpmHistory = this.userStats.wpmHistory.slice(-50);
-        }
-        
-        // Track difficulty-specific stats
-        if (this.currentDifficulty === 'advanced') {
-            this.userStats.advancedCompleted++;
-        }
-        
-        // Level progression (every 1000 points = 1 level)
-        const newLevel = Math.floor(this.userStats.totalScore / 1000) + 1;
-        if (newLevel > this.userStats.level) {
-            this.userStats.level = newLevel;
         }
         
         this.saveUserStats();
         this.updateHeaderStats();
     }
     
-    showResults(wpm, accuracy, score, time) {
+    showResults(wpm, accuracy, time) {
         // Update result display
         document.getElementById('final-wpm').textContent = wpm;
         document.getElementById('final-accuracy').textContent = accuracy + '%';
-        document.getElementById('final-time').textContent = Math.round(time) + 's';
-        document.getElementById('final-score').textContent = score;
+        document.getElementById('final-time').textContent = this.testDuration + 's';
         
         // Performance message
         const message = getPerformanceMessage(wpm, accuracy);
@@ -358,7 +624,6 @@ class CopticTypingTest {
     }
     
     celebrateAchievement() {
-        // Simple celebration animation
         const badge = document.getElementById('achievement-badge');
         badge.style.animation = 'none';
         setTimeout(() => {
@@ -368,31 +633,36 @@ class CopticTypingTest {
     
     resetTest() {
         this.isTestActive = false;
+        this.isTestComplete = false;
         clearInterval(this.timerInterval);
         
         this.typingInput.value = '';
-        this.typingInput.disabled = true;
-        this.startBtn.style.display = 'inline-flex';
-        this.resetBtn.style.display = 'none';
+        this.typingInput.disabled = false;
         
-        this.setupTextDisplay();
+        // Get selected duration
+        const selectedDuration = document.querySelector('input[name="duration"]:checked');
+        if (selectedDuration) {
+            this.testDuration = parseInt(selectedDuration.value);
+        }
+        this.timeRemaining = this.testDuration;
+        
+        this.generateNewText();
         this.resetStats();
+        
+        // Focus on input
+        setTimeout(() => this.typingInput.focus(), 100);
     }
     
     resetStats() {
         this.wpmElement.textContent = '0';
         this.accuracyElement.textContent = '100%';
-        this.timeElement.textContent = '0s';
+        this.timeElement.textContent = this.testDuration + 's';
         this.progressFill.style.width = '0%';
         this.progressText.textContent = '0%';
-    }
-    
-    backToMenu() {
-        this.resetTest();
-        this.typingArea.style.display = 'none';
-        this.difficultyPanel.style.display = 'block';
-        this.currentDifficulty = null;
-        this.currentText = null;
+        this.currentCharIndex = 0;
+        this.errors = 0;
+        this.totalCharsTyped = 0;
+        this.totalErrors = 0;
     }
     
     tryAgain() {
@@ -404,35 +674,20 @@ class CopticTypingTest {
     newChallenge() {
         this.resultsModal.style.display = 'none';
         document.getElementById('achievement-badge').style.display = 'none';
-        this.currentText = this.generateTextBasedOnSettings(this.currentDifficulty);
-        this.setupTextDisplay();
-        this.resetStats();
-        
-        // Clear the input box and reset typing state
-        this.typingInput.value = '';
-        this.typingInput.disabled = false;
-        this.typingInput.focus();
-        this.isTestActive = false;
-        this.startBtn.style.display = 'inline-flex';
-        this.resetBtn.style.display = 'none';
+        this.resetTest();
     }
     
     updateHeaderStats() {
-        this.levelElement.textContent = this.userStats.level;
-        this.scoreElement.textContent = this.userStats.totalScore.toLocaleString();
         this.bestWpmElement.textContent = this.userStats.bestWPM;
     }
     
     loadUserStats() {
         const defaultStats = {
-            level: 1,
-            totalScore: 0,
             bestWPM: 0,
             bestAccuracy: 0,
             testsCompleted: 0,
-            advancedCompleted: 0,
             achievements: [],
-            wpmHistory: [] // Array of {date, wpm, accuracy} objects
+            wpmHistory: []
         };
         
         try {
@@ -451,206 +706,8 @@ class CopticTypingTest {
         }
     }
     
-    initializeSettings() {
-        // Load saved settings
-        this.loadSettings();
-        
-        // Update UI to reflect current settings
-        this.updateSettingsUI();
-        
-        // Add event listeners for settings controls
-        const punctuationCheckbox = document.getElementById('include-punctuation');
-        const uppercaseCheckbox = document.getElementById('include-uppercase');
-        const textModeRadios = document.querySelectorAll('input[name="text-mode"]');
-        
-        if (punctuationCheckbox) {
-            punctuationCheckbox.addEventListener('change', () => {
-                console.log('Punctuation setting changed:', punctuationCheckbox.checked);
-                this.updateSettings();
-            });
-        }
-        
-        if (uppercaseCheckbox) {
-            uppercaseCheckbox.addEventListener('change', () => {
-                console.log('Uppercase setting changed:', uppercaseCheckbox.checked);
-                this.updateSettings();
-            });
-        }
-        
-        textModeRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (radio.checked) {
-                    console.log('Text mode changed to:', radio.value);
-                    this.updateSettings();
-                }
-            });
-        });
-        
-        console.log('Settings initialized with values:', this.settings);
-    }
-    
-    toggleSettings() {
-        const settingsContent = document.getElementById('settings-content');
-        const settingsToggle = document.getElementById('settings-toggle');
-        
-        if (settingsContent.style.display === 'none' || !settingsContent.style.display) {
-            settingsContent.style.display = 'block';
-            settingsToggle.innerHTML = '<i class="fas fa-cog"></i> Hide Settings';
-        } else {
-            settingsContent.style.display = 'none';
-            settingsToggle.innerHTML = '<i class="fas fa-cog"></i> Practice Settings';
-        }
-    }
-    
-    updateSettings() {
-        // Get current settings from UI
-        const punctuationCheckbox = document.getElementById('include-punctuation');
-        const uppercaseCheckbox = document.getElementById('include-uppercase');
-        const textModeRadios = document.querySelectorAll('input[name="text-mode"]');
-        
-        if (punctuationCheckbox) this.settings.includePunctuation = punctuationCheckbox.checked;
-        if (uppercaseCheckbox) this.settings.includeUppercase = uppercaseCheckbox.checked;
-        
-        // Handle radio buttons for text mode
-        textModeRadios.forEach(radio => {
-            if (radio.checked) {
-                this.settings.textMode = radio.value;
-            }
-        });
-        
-        // Save settings
-        this.saveSettings();
-        
-        console.log('Settings updated:', this.settings);
-    }
-    
-    updateSettingsUI() {
-        const punctuationCheckbox = document.getElementById('include-punctuation');
-        const uppercaseCheckbox = document.getElementById('include-uppercase');
-        const textModeRadios = document.querySelectorAll('input[name="text-mode"]');
-        
-        if (punctuationCheckbox) punctuationCheckbox.checked = this.settings.includePunctuation;
-        if (uppercaseCheckbox) uppercaseCheckbox.checked = this.settings.includeUppercase;
-        
-        // Set the correct radio button based on current text mode
-        textModeRadios.forEach(radio => {
-            radio.checked = radio.value === this.settings.textMode;
-        });
-    }
-    
-    loadSettings() {
-        try {
-            const saved = localStorage.getItem('copticTypingSettings');
-            if (saved) {
-                this.settings = { ...this.settings, ...JSON.parse(saved) };
-            }
-        } catch (e) {
-            console.warn('Could not load settings from localStorage');
-        }
-    }
-    
-    saveSettings() {
-        try {
-            localStorage.setItem('copticTypingSettings', JSON.stringify(this.settings));
-        } catch (e) {
-            console.warn('Could not save settings to localStorage');
-        }
-    }
-    
-    generateTextBasedOnSettings(difficulty) {
-        if (this.settings.textMode === 'generated') {
-            // Use word generator for random text only
-            let textObj = this.wordGenerator.generateRandomText(difficulty);
-            let copticText = textObj.coptic;
-            
-            // Apply settings modifications
-            if (!this.settings.includePunctuation) {
-                copticText = copticText.replace(/[.,;:!?؛]/g, '');
-            }
-            
-            if (!this.settings.includeUppercase) {
-                // Manual lowercase conversion for Coptic characters
-                copticText = this.convertCopticToLowercase(copticText);
-            }
-            
-            return {
-                coptic: copticText.trim(),
-                english: `Generated ${difficulty} level Coptic words`,
-                difficulty: difficulty
-            };
-        } else if (this.settings.textMode === 'curated') {
-            // Use original liturgical texts only
-            let liturgicalText = getRandomText(difficulty);
-            
-            // Apply settings to liturgical text
-            if (!this.settings.includePunctuation) {
-                liturgicalText.coptic = liturgicalText.coptic.replace(/[.,;:!?؛]/g, '');
-            }
-            
-            if (!this.settings.includeUppercase) {
-                liturgicalText.coptic = this.convertCopticToLowercase(liturgicalText.coptic);
-            }
-            
-            return liturgicalText;
-        } else {
-            // Mixed mode - randomly choose between curated and generated
-            const useGenerated = Math.random() < 0.5;
-            if (useGenerated) {
-                let textObj = this.wordGenerator.generateRandomText(difficulty);
-                let copticText = textObj.coptic;
-                
-                if (!this.settings.includePunctuation) {
-                    copticText = copticText.replace(/[.,;:!?؛]/g, '');
-                }
-                
-                if (!this.settings.includeUppercase) {
-                    copticText = this.convertCopticToLowercase(copticText);
-                }
-                
-                return {
-                    coptic: copticText.trim(),
-                    english: `Mixed: Generated ${difficulty} level Coptic words`,
-                    difficulty: difficulty
-                };
-            } else {
-                let liturgicalText = getRandomText(difficulty);
-                
-                // Apply settings to liturgical text too
-                if (!this.settings.includePunctuation) {
-                    liturgicalText.coptic = liturgicalText.coptic.replace(/[.,;:!?؛]/g, '');
-                }
-                
-                if (!this.settings.includeUppercase) {
-                    liturgicalText.coptic = this.convertCopticToLowercase(liturgicalText.coptic);
-                }
-                
-                return liturgicalText;
-            }
-        }
-    }
-    
-    // Helper method to convert Coptic text to lowercase manually
-    convertCopticToLowercase(text) {
-        // Coptic uppercase to lowercase mapping
-        const copticCaseMap = {
-            'Ⲁ': 'ⲁ', 'Ⲃ': 'ⲃ', 'Ⲅ': 'ⲅ', 'Ⲇ': 'ⲇ', 'Ⲉ': 'ⲉ', 'Ⲋ': 'ⲋ', 'Ⲍ': 'ⲍ', 'Ⲏ': 'ⲏ',
-            'Ⲑ': 'ⲑ', 'Ⲓ': 'ⲓ', 'Ⲕ': 'ⲕ', 'Ⲗ': 'ⲗ', 'Ⲙ': 'ⲙ', 'Ⲛ': 'ⲛ', 'Ⲝ': 'ⲝ', 'Ⲟ': 'ⲟ',
-            'Ⲡ': 'ⲡ', 'Ⲣ': 'ⲣ', 'Ⲥ': 'ⲥ', 'Ⲧ': 'ⲧ', 'Ⲩ': 'ⲩ', 'Ⲫ': 'ⲫ', 'Ⲭ': 'ⲭ', 'Ⲯ': 'ⲯ',
-            'Ⲱ': 'ⲱ', 'Ⲳ': 'ⲳ', 'Ⲵ': 'ⲵ', 'Ⲷ': 'ⲷ', 'Ⲹ': 'ⲹ', 'Ⲻ': 'ⲻ', 'Ⲽ': 'ⲽ', 'Ⲿ': 'ⲿ',
-            'Ⳁ': 'ⳁ', 'Ⳃ': 'ⳃ', 'Ⳅ': 'ⳅ', 'Ⳇ': 'ⳇ', 'Ⳉ': 'ⳉ', 'Ⳋ': 'ⳋ', 'Ⳍ': 'ⳍ', 'Ⳏ': 'ⳏ',
-            'Ⳑ': 'ⳑ', 'Ⳓ': 'ⳓ', 'Ⳕ': 'ⳕ', 'Ⳗ': 'ⳗ', 'Ⳙ': 'ⳙ', 'Ⳛ': 'ⳛ', 'Ⳝ': 'ⳝ', 'Ⳟ': 'ⳟ',
-            'Ⳡ': 'ⳡ', 'Ⳣ': 'ⳣ'
-        };
-        
-        let result = '';
-        for (let char of text) {
-            result += copticCaseMap[char] || char;
-        }
-        return result;
-    }
-    
     showWPMGraph() {
-        const modal = document.getElementById('wpm-graph-modal');
+        const modal = document.getElementById('wmp-graph-modal');
         const canvas = document.getElementById('wpm-chart');
         const ctx = canvas.getContext('2d');
         
@@ -690,6 +747,7 @@ class CopticTypingTest {
     }
     
     drawWPMChart(ctx, canvas, history) {
+        // Implementation similar to before but simplified
         const padding = 40;
         const chartWidth = canvas.width - (padding * 2);
         const chartHeight = canvas.height - (padding * 2);
@@ -697,34 +755,19 @@ class CopticTypingTest {
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Get min/max WPM for scaling
-        const wpmValues = history.map(session => session.wpm);
-        const minWpm = Math.max(0, Math.min(...wpmValues) - 5);
-        const maxWpm = Math.max(...wpmValues) + 5;
-        const wpmRange = maxWpm - minWpm;
+        // Simple chart implementation
+        ctx.fillStyle = '#2D3748';
+        ctx.font = 'bold 16px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Words Per Minute Over Time', canvas.width / 2, 25);
         
-        // Draw grid lines
-        ctx.strokeStyle = '#E2E8F0';
-        ctx.lineWidth = 1;
-        
-        // Horizontal grid lines
-        for (let i = 0; i <= 5; i++) {
-            const y = padding + (chartHeight / 5) * i;
-            ctx.beginPath();
-            ctx.moveTo(padding, y);
-            ctx.lineTo(padding + chartWidth, y);
-            ctx.stroke();
-            
-            // Y-axis labels
-            const wpmValue = Math.round(maxWpm - (wpmRange / 5) * i);
-            ctx.fillStyle = '#718096';
-            ctx.font = '12px Inter';
-            ctx.textAlign = 'right';
-            ctx.fillText(wpmValue + ' WPM', padding - 10, y + 4);
-        }
-        
-        // Draw chart line
         if (history.length > 1) {
+            const wpmValues = history.map(session => session.wpm);
+            const minWpm = Math.max(0, Math.min(...wpmValues) - 5);
+            const maxWpm = Math.max(...wpmValues) + 5;
+            const wpmRange = maxWpm - minWpm;
+            
+            // Draw line
             ctx.strokeStyle = '#8B1538';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -741,61 +784,124 @@ class CopticTypingTest {
             });
             
             ctx.stroke();
-            
-            // Draw points
-            ctx.fillStyle = '#D4AF37';
-            history.forEach((session, index) => {
-                const x = padding + (chartWidth / (history.length - 1)) * index;
-                const y = padding + chartHeight - ((session.wpm - minWpm) / wpmRange) * chartHeight;
-                
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                ctx.fill();
-            });
         }
-        
-        // Draw axes
-        ctx.strokeStyle = '#4A5568';
-        ctx.lineWidth = 2;
-        
-        // Y-axis
-        ctx.beginPath();
-        ctx.moveTo(padding, padding);
-        ctx.lineTo(padding, padding + chartHeight);
-        ctx.stroke();
-        
-        // X-axis
-        ctx.beginPath();
-        ctx.moveTo(padding, padding + chartHeight);
-        ctx.lineTo(padding + chartWidth, padding + chartHeight);
-        ctx.stroke();
-        
-        // X-axis labels (session numbers)
-        ctx.fillStyle = '#718096';
-        ctx.font = '12px Inter';
-        ctx.textAlign = 'center';
-        
-        const labelStep = Math.max(1, Math.floor(history.length / 8));
-        for (let i = 0; i < history.length; i += labelStep) {
-            const x = padding + (chartWidth / (history.length - 1)) * i;
-            ctx.fillText(`#${i + 1}`, x, padding + chartHeight + 20);
-        }
-        
-        // Chart title
-        ctx.fillStyle = '#2D3748';
-        ctx.font = 'bold 16px Inter';
-        ctx.textAlign = 'center';
-        ctx.fillText('Words Per Minute Over Time', canvas.width / 2, 25);
     }
 }
 
-// Add CSS animation for achievement celebration
+// Add CSS animation for achievement celebration and space indicator
 const style = document.createElement('style');
 style.textContent = `
     @keyframes pulse {
         0% { transform: scale(1); }
         50% { transform: scale(1.1); }
         100% { transform: scale(1); }
+    }
+    
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.3; }
+    }
+    
+    .duration-panel {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .duration-options {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .duration-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: 2px solid #E2E8F0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .duration-option:hover {
+        border-color: #8B1538;
+        background-color: #FFF5F5;
+    }
+    
+    .duration-option input[type="radio"] {
+        margin: 0;
+    }
+    
+    .duration-option input[type="radio"]:checked + span {
+        color: #8B1538;
+        font-weight: 600;
+    }
+    
+    .text-line {
+        line-height: 2.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+        padding: 0.25rem 0;
+    }
+    
+    .text-line.active-line {
+        opacity: 1;
+        font-weight: 500;
+        border-left: 3px solid #8B1538;
+        padding-left: 0.5rem;
+        background: linear-gradient(90deg, rgba(139, 21, 56, 0.05) 0%, transparent 100%);
+    }
+    
+    .text-line.preview-line {
+        opacity: 0.6;
+        font-weight: 400;
+        padding-left: 0.75rem;
+    }
+    
+    .text-content {
+        min-height: 6rem;
+        max-height: 6rem;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    /* Responsive font sizes */
+    @media (max-width: 768px) {
+        .text-line {
+            font-size: 1.25rem;
+            line-height: 2rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .text-line {
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+        }
+    }
+    
+    /* Safari diacritical mark rendering fixes */
+    .char {
+        font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+        -webkit-font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-text-rendering: optimizeLegibility;
+        font-variant-ligatures: common-ligatures contextual;
+        -webkit-font-variant-ligatures: common-ligatures contextual;
+    }
+    
+    .text-content, .typing-input {
+        font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+        -webkit-font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "mark" 1, "mkmk" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-text-rendering: optimizeLegibility;
+        font-variant-ligatures: common-ligatures contextual;
+        -webkit-font-variant-ligatures: common-ligatures contextual;
+        unicode-bidi: bidi-override;
+        direction: ltr;
     }
 `;
 document.head.appendChild(style);
@@ -819,27 +925,12 @@ document.addEventListener('keydown', (e) => {
 
 // Prevent accidental page refresh during test
 window.addEventListener('beforeunload', (e) => {
-    const typingArea = document.getElementById('typing-area');
-    const isTestVisible = typingArea && typingArea.style.display !== 'none';
     const input = document.getElementById('typing-input');
     const hasContent = input && input.value.length > 0;
     
-    if (isTestVisible && hasContent) {
+    if (hasContent) {
         e.preventDefault();
         e.returnValue = '';
         return '';
     }
 });
-
-// Add touch support for mobile devices
-if ('ontouchstart' in window) {
-    document.body.classList.add('touch-device');
-    
-    // Improve mobile typing experience
-    const typingInput = document.getElementById('typing-input');
-    if (typingInput) {
-        typingInput.addEventListener('touchstart', () => {
-            typingInput.focus();
-        });
-    }
-}

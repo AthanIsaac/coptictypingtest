@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Generator Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .word-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .generated-text {
+            background: #e8f4f8;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Coptic Word Generator Test</h1>
+    
+    <div class="test-section">
+        <h2>Extracted Words</h2>
+        <p>Total words extracted: <span id="wordCount">0</span></p>
+        <div class="word-list" id="wordList"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Word Statistics</h2>
+        <div id="wordStats"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Generated Text Examples</h2>
+        <button onclick="generateText('beginner')">Generate Beginner</button>
+        <button onclick="generateText('intermediate')">Generate Intermediate</button>
+        <button onclick="generateText('advanced')">Generate Advanced</button>
+        <div id="generatedTexts"></div>
+    </div>
+
+    <script src="word-generator.js"></script>
+    <script>
+        // Display extracted words
+        function displayWords() {
+            const wordCount = document.getElementById('wordCount');
+            const wordList = document.getElementById('wordList');
+            
+            wordCount.textContent = wordGenerator.copticWords.length;
+            
+            // Show first 50 words as examples
+            const wordsToShow = wordGenerator.copticWords.slice(0, 50);
+            wordList.innerHTML = wordsToShow.map(word => 
+                `<span style="margin: 2px; padding: 2px 6px; background: white; border-radius: 3px; display: inline-block;">${word}</span>`
+            ).join('');
+            
+            if (wordGenerator.copticWords.length > 50) {
+                wordList.innerHTML += `<p><em>... and ${wordGenerator.copticWords.length - 50} more words</em></p>`;
+            }
+        }
+        
+        // Display word statistics
+        function displayStats() {
+            const stats = wordGenerator.getWordStats();
+            const statsDiv = document.getElementById('wordStats');
+            
+            statsDiv.innerHTML = `
+                <p><strong>Total words:</strong> ${stats.total}</p>
+                <p><strong>Beginner words (2-5 chars):</strong> ${stats.beginner}</p>
+                <p><strong>Intermediate words (4-8 chars):</strong> ${stats.intermediate}</p>
+                <p><strong>Advanced words (6+ chars):</strong> ${stats.advanced}</p>
+                <p><strong>Average word length:</strong> ${stats.averageLength} characters</p>
+            `;
+        }
+        
+        // Generate text examples
+        function generateText(difficulty) {
+            const result = wordGenerator.generateRandomText(difficulty);
+            const generatedTexts = document.getElementById('generatedTexts');
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'generated-text';
+            textDiv.innerHTML = `
+                <h4>${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Text:</h4>
+                <p style="font-size: 18px; font-weight: bold;">${result.coptic}</p>
+                <p><em>${result.english}</em></p>
+            `;
+            
+            generatedTexts.appendChild(textDiv);
+        }
+        
+        // Initialize display
+        displayWords();
+        displayStats();
+        
+        // Log some words to console for debugging
+        console.log('First 20 extracted words:', wordGenerator.copticWords.slice(0, 20));
+        console.log('Sample beginner words:', wordGenerator.getWordsByDifficulty('beginner').slice(0, 10));
+    </script>
+</body>
+</html>

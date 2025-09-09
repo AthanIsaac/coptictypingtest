@@ -22,14 +22,13 @@
     font-feature-settings: "mark" 1, "mkmk" 1;
 }
 
-/* Safari-specific fix for combining diacritical marks */
-@supports (-webkit-appearance: none) {
-    .text-content,
-    .typing-input {
-        /* Force Safari to use proper mark positioning */
-        -webkit-text-stroke: 0.01px transparent;
-        text-shadow: 0 0 0 transparent;
-    }
+/* Simplified cross-browser font rendering for consistency */
+.text-content,
+.typing-input {
+    /* Basic font rendering optimization */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Reset and Base Styles */
@@ -355,23 +354,27 @@ body {
 .text-content .char {
     position: relative;
     transition: all 0.15s ease;
-    padding: 2px 1px;
-    border-radius: var(--radius-sm);
 }
 
 .text-content .char.correct {
     background-color: rgba(72, 187, 120, 0.2);
     color: #2F855A;
+    padding: 2px 1px;
+    border-radius: var(--radius-sm);
 }
 
 .text-content .char.incorrect {
     background-color: rgba(245, 101, 101, 0.2);
     color: #C53030;
+    padding: 2px 1px;
+    border-radius: var(--radius-sm);
 }
 
 .text-content .char.current {
-    background-color: var(--coptic-gold);
-    color: white;
+    background-color: var(--coptic-gold) !important;
+    color: white !important;
+    padding: 2px 1px;
+    border-radius: var(--radius-sm);
     animation: pulse 1s ease-in-out infinite;
 }
 
